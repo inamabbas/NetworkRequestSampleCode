@@ -24,6 +24,25 @@ class CombineNetworkService: CombineNetworkServiceProtocol {
         guard let urlRequest = request.urlRequest() else {
             return Fail(error: CustomError.invalidRequest).eraseToAnyPublisher()
         }
+        
+        return session.dataTaskPublisher(for: urlRequest)
+            .mapError { _ in
+                CustomError.invalidRequest
+            }
+            .flatMap { data, response -> AnyPublisher<Data, Error> in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    return Fail(error: CustomError.invalidResponse).eraseToAnyPublisher()
+                }
+                
+                guard 200..<300 ~= httpResponse.statusCode else {
+                    return Fail(error: CustomError.invalidRequest).eraseToAnyPublisher()
+                }
+                return Just(data).setFailureType(to: Error.self).eraseToAnyPublisher()
+            }
+            .decode(type: responseType.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+            
+            .
 
         return session.dataTaskPublisher(for: urlRequest)
             .receive(on: DispatchQueue.global())
